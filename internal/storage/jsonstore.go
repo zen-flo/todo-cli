@@ -100,18 +100,32 @@ func (s *JSONStore) UpdateTask(t task.Task) error {
 
 // DeleteTask — удаляет задачу по ID.
 func (s *JSONStore) DeleteTask(id int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Загружаем все задачи
 	tasks, err := s.loadTasks()
 	if err != nil {
 		return err
 	}
 
-	for i, existing := range tasks {
-		if existing.ID == id {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-			return s.saveTasks(tasks)
+	// Создаём новый слайс без удаляемой задачи
+	var newTasks []task.Task
+	found := false
+	for _, t := range tasks {
+		if t.ID == id {
+			found = true
+			continue // пропускаем удаляемую задачу
 		}
+		newTasks = append(newTasks, t)
 	}
-	return errors.New("task not found")
+
+	if !found {
+		return fmt.Errorf("задача с ID %d не найдена", id)
+	}
+
+	// Сохраняем обновлённый список задач
+	return s.saveTasks(newTasks)
 }
 
 // MarkTaskDone отмечает задачу с указанным ID как выполненную.
