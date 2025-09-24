@@ -7,16 +7,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// rootCmd — это корневая команда CLI.
+// К ней будут добавляться все подкоманды (например, add, list, done).
 var rootCmd = &cobra.Command{
-	Use:   "todo",
-	Short: "ToDo CLI — простой менеджер задач",
-	Long:  "ToDo CLI позволяет добавлять, отмечgit add .\nать и удалять задачи прямо из терминала.",
+	Use:   "todo",                              // имя исполняемой команды
+	Short: "ToDo CLI — простой менеджер задач", // краткое описание
+	Long: `Todo CLI — это минималистичный менеджер задач.
+Позволяет добавлять, просматривать, отмечать и удалять задачи прямо из терминала.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Используйте подкоманды, например: todo add \"купить хлеб\"")
 	},
 }
 
-// Execute запускает CLI
+// Execute — функция, которая запускает корневую команду.
+// Если возникнет ошибка, приложение завершится с кодом 1.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
