@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/zen-flo/todo-cli/internal/task"
 	"os"
 	"sync"
@@ -111,4 +112,34 @@ func (s *JSONStore) DeleteTask(id int) error {
 		}
 	}
 	return errors.New("task not found")
+}
+
+// MarkTaskDone отмечает задачу с указанным ID как выполненную.
+func (s *JSONStore) MarkTaskDone(id int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Загружаем все задачи
+	tasks, err := s.loadTasks()
+	if err != nil {
+		return err
+	}
+
+	// Ищем задачу по ID
+	found := false
+	for i := range tasks {
+		if tasks[i].ID == id {
+			tasks[i].Completed = true
+			found = true
+			break
+		}
+	}
+
+	// Если задача не найдена — сообщаем пользователю
+	if !found {
+		return fmt.Errorf("задача с ID %d не найдена", id)
+	}
+
+	// Сохраняем обновлённый список задач
+	return s.saveTasks(tasks)
 }
