@@ -17,6 +17,8 @@ type JSONStore struct {
 }
 
 // NewJSONStore — конструктор JSONStore.
+// NewJSONStore создаёт новый экземпляр JSONStore с указанным файлом.
+// Потокобезопасный метод: внутренние операции синхронизированы мьютексом.
 func NewJSONStore(filePath string) *JSONStore {
 	return &JSONStore{FilePath: filePath}
 }
@@ -48,7 +50,9 @@ func (s *JSONStore) saveTasks(tasks []task.Task) error {
 	return os.WriteFile(s.FilePath, data, 0644)
 }
 
-// AddTask — добавляет новую задачу в список и сохраняет её в JSON.
+// AddTask добавляет новую задачу в хранилище.
+// Потокобезопасный метод: использует мьютекс для синхронизации доступа.
+// Возвращает ошибку, если не удалось сохранить задачу.
 func (s *JSONStore) AddTask(t task.Task) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -77,28 +81,44 @@ func (s *JSONStore) AddTask(t task.Task) error {
 	return s.saveTasks(tasks)
 }
 
-// ListTasks — возвращает все задачи из JSON-файла.
+// ListTasks возвращает все задачи из хранилища.
+// Потокобезопасный метод: использует мьютекс для синхронизации доступа.
+// Возвращает слайс задач и ошибку, если не удалось загрузить данные.
 func (s *JSONStore) ListTasks() ([]task.Task, error) {
 	return s.loadTasks()
 }
 
-// UpdateTask — обновляет задачу по ID.
-func (s *JSONStore) UpdateTask(t task.Task) error {
+// UpdateTask изменяет название задачи с указанным ID.
+// Потокобезопасный метод: использует мьютекс для синхронизации доступа.
+// Если задача с таким ID не найдена, возвращает ошибку.
+func (s *JSONStore) UpdateTask(id int, newTitle string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	tasks, err := s.loadTasks()
 	if err != nil {
 		return err
 	}
 
-	for i, existing := range tasks {
-		if existing.ID == t.ID {
-			tasks[i] = t
-			return s.saveTasks(tasks)
+	found := false
+	for i := range tasks {
+		if tasks[i].ID == id {
+			tasks[i].Title = newTitle
+			found = true
+			break
 		}
 	}
-	return errors.New("task not found")
+
+	if !found {
+		return fmt.Errorf("задача с ID %d не найдена", id)
+	}
+
+	return s.saveTasks(tasks)
 }
 
-// DeleteTask — удаляет задачу по ID.
+// DeleteTask удаляет задачу с указанным ID из хранилища.
+// Потокобезопасный метод: использует мьютекс для синхронизации доступа.
+// Если задача с таким ID не найдена, возвращает ошибку.
 func (s *JSONStore) DeleteTask(id int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,6 +149,8 @@ func (s *JSONStore) DeleteTask(id int) error {
 }
 
 // MarkTaskDone отмечает задачу с указанным ID как выполненную.
+// Потокобезопасный метод: использует мьютекс для синхронизации доступа.
+// Если задача с таким ID не найдена, возвращает ошибку.
 func (s *JSONStore) MarkTaskDone(id int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
