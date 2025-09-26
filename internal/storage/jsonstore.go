@@ -33,6 +33,11 @@ func (s *JSONStore) loadTasks() ([]task.Task, error) {
 		return nil, err
 	}
 
+	// если файл существует, но пустой
+	if len(data) == 0 {
+		return []task.Task{}, nil
+	}
+
 	var tasks []task.Task
 	if err := json.Unmarshal(data, &tasks); err != nil {
 		return nil, err
@@ -177,5 +182,14 @@ func (s *JSONStore) MarkTaskDone(id int) error {
 	}
 
 	// Сохраняем обновлённый список задач
+	return s.saveTasks(tasks)
+}
+
+// OverwriteTasks полностью заменяет список задач в хранилище.
+// Потокобезопасный метод: использует мьютекс для синхронизации доступа.
+func (s *JSONStore) OverwriteTasks(tasks []task.Task) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	return s.saveTasks(tasks)
 }

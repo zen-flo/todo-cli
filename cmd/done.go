@@ -42,5 +42,19 @@ var doneCmd = &cobra.Command{
 // init автоматически вызывается при старте приложения.
 // Здесь мы подключаем подкоманду "done" к rootCmd.
 func init() {
+	doneCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		store := storage.NewJSONStore("tasks.json")
+		tasks, err := store.ListTasks()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		var ids []string
+		for _, t := range tasks {
+			ids = append(ids, fmt.Sprintf("%d", t.ID))
+		}
+		return ids, cobra.ShellCompDirectiveNoFileComp
+	}
+
 	rootCmd.AddCommand(doneCmd)
 }

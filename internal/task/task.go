@@ -2,15 +2,15 @@ package task
 
 import "time"
 
-// Task представляет задачу
+// Task — основная модель задачи.
 type Task struct {
-	ID        int       `json:"id"`
-	Title     string    `json:"title"`
-	Completed bool      `json:"completed"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int       `json:"id"`         // Уникальный идентификатор
+	Title     string    `json:"title"`      // Заголовок задачи
+	Completed bool      `json:"completed"`  // Статус выполнения (true = выполнено)
+	CreatedAt time.Time `json:"created_at"` // Время создания задачи
 }
 
-// MarkDone отмечает задачу как выполненную
+// MarkDone — метод, который отмечает задачу как выполненную.
 func (t *Task) MarkDone() {
 	t.Completed = true
 }

@@ -14,7 +14,7 @@ import (
 //	todo add "Купить хлеб"
 var addCmd = &cobra.Command{
 	Use:   "add [task title]",      // формат вызова
-	Short: "Добавить новую задачу", // короткое описание
+	Short: "Добавить новую задачу", // краткое описание
 	Args:  cobra.ExactArgs(1),      // ожидаем ровно один аргумент — название задачи
 	Run: func(cmd *cobra.Command, args []string) {
 		// Создаём новое хранилище задач.
