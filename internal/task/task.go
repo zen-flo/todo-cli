@@ -8,6 +8,7 @@ type Task struct {
 	Title     string    `json:"title"`      // Заголовок задачи
 	Completed bool      `json:"completed"`  // Статус выполнения (true = выполнено)
 	CreatedAt time.Time `json:"created_at"` // Время создания задачи
+	Important bool      `json:"important"`  // Новый параметр: важность задачи. Важная/неважная
 }
 
 // MarkDone — метод, который отмечает задачу как выполненную.

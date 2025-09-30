@@ -26,11 +26,14 @@ var updateCmd = &cobra.Command{
 
 		newTitle := args[1]
 
+		// Считываем флаг, что задача важная
+		important, _ := cmd.Flags().GetBool("important")
+
 		// Создаём хранилище задач
 		store := storage.NewJSONStore("tasks.json")
 
 		// Обновляем название задачи через публичный метод UpdateTask
-		err = store.UpdateTask(id, newTitle)
+		err = store.UpdateTask(id, newTitle, important)
 		if err != nil {
 			fmt.Println("Ошибка при обновлении задачи:", err)
 			return
@@ -59,4 +62,5 @@ func init() {
 	}
 
 	rootCmd.AddCommand(updateCmd)
+	updateCmd.Flags().BoolP("important", "i", false, "Сделать задачу важной")
 }

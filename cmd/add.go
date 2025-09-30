@@ -21,13 +21,17 @@ var addCmd = &cobra.Command{
 		// Указываем путь к файлу.
 		store := storage.NewJSONStore("tasks.json")
 
+		// Считываем флаг, что задача важная
+		important, _ := cmd.Flags().GetBool("important")
+
 		// Формируем новую задачу.
 		// ID сейчас фиксированный (1) — это временное решение,
 		// позже JSONStore будет генерировать уникальные ID.
 		newTask := task.Task{
-			ID:        1, // пока фиксируем ID
+			// ID присваивается автоматически внутри AddTask
 			Title:     args[0],
 			Completed: false,
+			Important: important,
 			CreatedAt: time.Now(),
 		}
 
@@ -47,4 +51,5 @@ var addCmd = &cobra.Command{
 // Здесь мы подключаем подкоманду add к rootCmd.
 func init() {
 	rootCmd.AddCommand(addCmd)
+	addCmd.Flags().BoolP("important", "i", false, "Отметить задачу как важную")
 }
