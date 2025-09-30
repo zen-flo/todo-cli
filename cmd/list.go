@@ -44,14 +44,10 @@ func printTasksTable(tasks []task.Task) {
 
 	// Строки таблицы
 	for _, t := range tasks {
-		status := "❌"
-		if t.Completed {
-			status = "✅"
-		}
-		fmt.Printf("%-4d %-7s %-20s %-16s\n",
+		fmt.Printf("%-4d %-7s %-30s %-16s\n",
 			t.ID,
-			status,
-			t.Title,
+			formatStatus(t.Completed),
+			formatTaskTitle(t),
 			t.CreatedAt.Format("2006-01-02 15:04"),
 		)
 	}
@@ -82,12 +78,16 @@ var listCmd = &cobra.Command{
 		}
 
 		// Получаем флаги
-		sortBy, _ := cmd.Flags().GetString("sort")   //сортировка: name, date
-		filter, _ := cmd.Flags().GetString("filter") // фильтр: all, pending, completed
+		sortBy, _ := cmd.Flags().GetString("sort")           //сортировка: name, date
+		filter, _ := cmd.Flags().GetString("filter")         // фильтр: all, pending, completed
+		importantOnly, _ := cmd.Flags().GetBool("important") // фильтр: важные. Да/нет.
 
 		// Фильтрация по статусу
 		filtered := make([]task.Task, 0)
 		for _, t := range tasks {
+			if importantOnly && !t.Important {
+				continue
+			}
 			switch filter {
 			case "pending":
 				if !t.Completed {
@@ -105,32 +105,17 @@ var listCmd = &cobra.Command{
 		// Сортировка задач
 		switch sortBy {
 		case "name":
-			sort.Slice(tasks, func(i, j int) bool {
-				return tasks[i].Title < tasks[j].Title
-			})
+			sort.Slice(filtered, func(i, j int) bool { return filtered[i].Title < filtered[j].Title })
 		case "date":
-			sort.Slice(tasks, func(i, j int) bool {
-				return tasks[i].CreatedAt.Before(tasks[j].CreatedAt)
-			})
+			sort.Slice(filtered, func(i, j int) bool { return filtered[i].CreatedAt.Before(filtered[j].CreatedAt) })
 		case "":
-			// без сортировки
 		default:
 			fmt.Println("Неизвестный параметр сортировки. Используйте name или date.")
 			os.Exit(1)
 		}
 
 		// Вывод заголовков таблицы
-		fmt.Printf("%-4s %-7s %-25s %s\n", "ID", "Status", "Title", "CreatedAt")
-		fmt.Println("------------------------------------------------------------")
-
-		for _, t := range tasks {
-			fmt.Printf("%-4d %-7s %-30s %s\n",
-				t.ID,
-				formatStatus(t.Completed),
-				formatTaskTitle(t),
-				t.CreatedAt.Format("2006-01-02 15:04"),
-			)
-		}
+		printTasksTable(filtered)
 	},
 }
 
@@ -138,7 +123,24 @@ var listCmd = &cobra.Command{
 // Здесь мы подключаем подкоманду "list" к rootCmd.
 func init() {
 	rootCmd.AddCommand(listCmd)
-	// Флаг сортировки
+
+	// Флаги
 	listCmd.Flags().StringP("sort", "s", "", "Сортировка: name или date")
 	listCmd.Flags().StringP("filter", "f", "all", "Фильтр: all, pending, completed")
+	listCmd.Flags().BoolP("important", "i", false, "Показать только важные задачи")
+
+	// Автодополнение для флага --sort
+	_ = listCmd.RegisterFlagCompletionFunc("sort", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"name", "date"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	// Автодополнение для флага --filter
+	_ = listCmd.RegisterFlagCompletionFunc("filter", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"all", "pending", "completed"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	// Автодополнение для флага --important
+	_ = listCmd.RegisterFlagCompletionFunc("important", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"true", "false"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }

@@ -96,7 +96,7 @@ func (s *JSONStore) ListTasks() ([]task.Task, error) {
 // UpdateTask изменяет название задачи с указанным ID.
 // Потокобезопасный метод: использует мьютекс для синхронизации доступа.
 // Если задача с таким ID не найдена, возвращает ошибку.
-func (s *JSONStore) UpdateTask(id int, newTitle string) error {
+func (s *JSONStore) UpdateTask(id int, newTitle string, important bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -109,6 +109,7 @@ func (s *JSONStore) UpdateTask(id int, newTitle string) error {
 	for i := range tasks {
 		if tasks[i].ID == id {
 			tasks[i].Title = newTitle
+			tasks[i].Important = important
 			found = true
 			break
 		}
