@@ -51,5 +51,16 @@ var addCmd = &cobra.Command{
 // Здесь мы подключаем подкоманду add к rootCmd.
 func init() {
 	rootCmd.AddCommand(addCmd)
+
+	// Флаг важности
 	addCmd.Flags().BoolP("important", "i", false, "Отметить задачу как важную")
+
+	// Автодополнение для флага --important
+	addCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// Проверяем, что пользователь вводит флаг --important
+		if len(args) == 0 || args[len(args)-1] == "--important" {
+			return []string{"true", "false"}, cobra.ShellCompDirectiveNoFileComp
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
 }

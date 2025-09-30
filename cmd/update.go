@@ -62,5 +62,16 @@ func init() {
 	}
 
 	rootCmd.AddCommand(updateCmd)
+
+	// Флаг важности
 	updateCmd.Flags().BoolP("important", "i", false, "Сделать задачу важной")
+
+	// Автодополнение для флага --important
+	updateCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		// Проверяем, что пользователь вводит флаг --important
+		if len(args) == 0 || args[len(args)-1] == "--important" {
+			return []string{"true", "false"}, cobra.ShellCompDirectiveNoFileComp
+		}
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
 }
