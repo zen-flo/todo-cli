@@ -36,6 +36,27 @@ func formatTaskTitle(t task.Task) string {
 	return title
 }
 
+// printTasksTable выводит задачи в виде таблицы с выравниванием и цветным статусом.
+func printTasksTable(tasks []task.Task) {
+	// Заголовок таблицы
+	fmt.Printf("\033[36m%-4s %-7s %-20s %-16s\033[0m\n", "ID", "STATUS", "TITLE", "CREATED AT")
+	fmt.Println("-----------------------------------------------")
+
+	// Строки таблицы
+	for _, t := range tasks {
+		status := "❌"
+		if t.Completed {
+			status = "✅"
+		}
+		fmt.Printf("%-4d %-7s %-20s %-16s\n",
+			t.ID,
+			status,
+			t.Title,
+			t.CreatedAt.Format("2006-01-02 15:04"),
+		)
+	}
+}
+
 // listCmd — подкоманда "list", которая выводит все задачи.
 // Поддерживает флаг --sort=name/date
 // Пример использования:
@@ -60,8 +81,26 @@ var listCmd = &cobra.Command{
 			return
 		}
 
-		// Получаем флаг сортировки
-		sortBy, _ := cmd.Flags().GetString("sort")
+		// Получаем флаги
+		sortBy, _ := cmd.Flags().GetString("sort")   //сортировка: name, date
+		filter, _ := cmd.Flags().GetString("filter") // фильтр: all, pending, completed
+
+		// Фильтрация по статусу
+		filtered := make([]task.Task, 0)
+		for _, t := range tasks {
+			switch filter {
+			case "pending":
+				if !t.Completed {
+					filtered = append(filtered, t)
+				}
+			case "completed":
+				if t.Completed {
+					filtered = append(filtered, t)
+				}
+			default:
+				filtered = append(filtered, t)
+			}
+		}
 
 		// Сортировка задач
 		switch sortBy {
@@ -101,4 +140,5 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	// Флаг сортировки
 	listCmd.Flags().StringP("sort", "s", "", "Сортировка: name или date")
+	listCmd.Flags().StringP("filter", "f", "all", "Фильтр: all, pending, completed")
 }
