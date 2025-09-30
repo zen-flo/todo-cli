@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/zen-flo/todo-cli/internal/storage"
+	"github.com/zen-flo/todo-cli/internal/task"
 	"os"
 	"sort"
+	"time"
 )
 
 // formatStatus возвращает цветной символ статуса задачи.
@@ -15,6 +17,23 @@ func formatStatus(completed bool) string {
 		return "\033[32m✅\033[0m"
 	}
 	return "\033[31m❌\033[0m"
+}
+
+// formatTaskTitle форматирует название задачи, добавляет значки и подсветку.
+// 🔥 — важная задача, ⏰ — просроченная (старше 7 дней и не выполнена)
+func formatTaskTitle(t task.Task) string {
+	title := t.Title
+
+	if t.Important {
+		title = "🔥 " + title
+	}
+
+	if !t.Completed && time.Since(t.CreatedAt) > 7*24*time.Hour {
+		// Просрочена — жёлтый цвет
+		title = "\033[33m" + title + "\033[0m"
+	}
+
+	return title
 }
 
 // listCmd — подкоманда "list", которая выводит все задачи.
@@ -36,9 +55,8 @@ var listCmd = &cobra.Command{
 			return
 		}
 
-		// Если список пуст — выводим сообщение
 		if len(tasks) == 0 {
-			fmt.Println("Список задач пуст.")
+			fmt.Println("Список задач пуст. Добавьте новую с помощью: todo add \"Название задачи\"")
 			return
 		}
 
@@ -62,13 +80,15 @@ var listCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Выводим все задачи с цветным статусом и выравниванием
-		fmt.Println("Список задач:")
+		// Вывод заголовков таблицы
+		fmt.Printf("%-4s %-7s %-25s %s\n", "ID", "Status", "Title", "CreatedAt")
+		fmt.Println("------------------------------------------------------------")
+
 		for _, t := range tasks {
-			fmt.Printf("%-4d %s %-20s %s\n",
+			fmt.Printf("%-4d %-7s %-30s %s\n",
 				t.ID,
-				formatStatus(t.Completed), // без %-2s
-				t.Title,
+				formatStatus(t.Completed),
+				formatTaskTitle(t),
 				t.CreatedAt.Format("2006-01-02 15:04"),
 			)
 		}
