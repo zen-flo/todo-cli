@@ -49,11 +49,13 @@ func init() {
 			return nil, cobra.ShellCompDirectiveError
 		}
 
-		var ids []string
+		var suggestions []string
 		for _, t := range tasks {
-			ids = append(ids, fmt.Sprintf("%d", t.ID))
+			if !t.Completed { // показываем только невыполненные
+				suggestions = append(suggestions, fmt.Sprint(t.ID))
+			}
 		}
-		return ids, cobra.ShellCompDirectiveNoFileComp
+		return suggestions, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	rootCmd.AddCommand(doneCmd)

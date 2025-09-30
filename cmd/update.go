@@ -45,22 +45,17 @@ var updateCmd = &cobra.Command{
 // Здесь мы подключаем подкоманду "update" к rootCmd.
 func init() {
 	updateCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		// автодополнение только для первого аргумента
-		if len(args) > 0 {
-			return nil, cobra.ShellCompDirectiveNoFileComp
-		}
-
 		store := storage.NewJSONStore("tasks.json")
 		tasks, err := store.ListTasks()
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveError
 		}
 
-		var ids []string
+		var suggestions []string
 		for _, t := range tasks {
-			ids = append(ids, fmt.Sprintf("%d", t.ID))
+			suggestions = append(suggestions, fmt.Sprint(t.ID))
 		}
-		return ids, cobra.ShellCompDirectiveNoFileComp
+		return suggestions, cobra.ShellCompDirectiveNoFileComp
 	}
 
 	rootCmd.AddCommand(updateCmd)
