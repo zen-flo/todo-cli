@@ -25,7 +25,7 @@ var doneCmd = &cobra.Command{
 		}
 
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Отмечаем задачу как выполненную
 		err = store.MarkTaskDone(id)
@@ -43,7 +43,7 @@ var doneCmd = &cobra.Command{
 // Здесь мы подключаем подкоманду "done" к rootCmd.
 func init() {
 	doneCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 		tasks, err := store.ListTasks()
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveError

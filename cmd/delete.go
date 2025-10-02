@@ -25,7 +25,7 @@ var deleteCmd = &cobra.Command{
 		}
 
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Удаляем задачу через публичный метод
 		err = store.DeleteTask(id)
@@ -43,7 +43,7 @@ var deleteCmd = &cobra.Command{
 // Здесь мы подключаем подкоманду "delete" к rootCmd.
 func init() {
 	deleteCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 		tasks, err := store.ListTasks()
 		if err != nil {
 			return nil, cobra.ShellCompDirectiveError

@@ -16,7 +16,7 @@ var pendingCmd = &cobra.Command{
 	Short: "Показать только невыполненные задачи", // краткое описание
 	Run: func(cmd *cobra.Command, args []string) {
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Получаем список всех задач
 		tasks, err := store.ListTasks()

@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"bytes"
+	"github.com/spf13/cobra"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,8 +12,7 @@ import (
 	"github.com/zen-flo/todo-cli/internal/task"
 )
 
-// captureOutput ловит вывод в stdout
-// captureOutput ловит вывод в stdout
+// --- Вспомогательная функция для перехвата stdout ---
 func captureOutput(f func()) string {
 	var buf bytes.Buffer
 
@@ -46,7 +47,7 @@ func captureOutput(f func()) string {
 	return buf.String()
 }
 
-// helper: создает временный JSONStore и подменяет tasksFile
+// --- Вспомогательная функция для временного хранилища ---
 func withTempStore(t *testing.T, f func(store *storage.JSONStore, tmpFile string)) {
 	tmpFile, err := os.CreateTemp("", "tasks_*.json")
 	if err != nil {
@@ -89,12 +90,56 @@ func TestAddCommand(t *testing.T) {
 
 // --- Тест addCmd без аргументов ---
 func TestAddCommand_NoArgs(t *testing.T) {
-	output := captureOutput(func() {
-		addCmd.Run(addCmd, []string{})
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			addCmd.Run(addCmd, []string{})
+		})
+		if !bytes.Contains([]byte(output), []byte("Ошибка: нужно указать заголовок задачи")) {
+			t.Errorf("ожидалось сообщение об ошибке при отсутствии аргументов")
+		}
 	})
-	if !bytes.Contains([]byte(output), []byte("нужно указать заголовок задачи")) {
-		t.Errorf("ожидалось сообщение об ошибке при отсутствии аргументов")
+}
+
+// --- Проверка ошибок addCmd ---
+func TestAddCommand_NoArgs_Error(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			addCmd.Run(addCmd, []string{})
+		})
+		if !strings.Contains(output, "Ошибка: нужно указать заголовок задачи.") {
+			t.Errorf("ожидалось сообщение об ошибке, получено: %s", output)
+		}
+	})
+}
+
+// --- Тесты флагов и автодополнения ---
+func TestAddCmdFlagCompletion(t *testing.T) {
+	fn := func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"true", "false"}, cobra.ShellCompDirectiveNoFileComp
 	}
+
+	res, dir := fn(addCmd, nil, "")
+	expected := []string{"true", "false"}
+
+	for i := range expected {
+		if res[i] != expected[i] {
+			t.Errorf("ожидалось %v, получено %v", expected[i], res[i])
+		}
+	}
+
+	if dir != cobra.ShellCompDirectiveNoFileComp {
+		t.Errorf("ожидалось директиву NoFileComp, получено %v", dir)
+	}
+}
+
+func TestUpdateCmdValidArgsFunction(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		suggestions, _ := updateCmd.ValidArgsFunction(updateCmd, nil, "")
+		// Если список задач пуст, suggestions должно быть nil
+		if suggestions != nil && len(suggestions) != 0 {
+			t.Errorf("ожидалось пустое предложение для пустого списка, получено: %v", suggestions)
+		}
+	})
 }
 
 // --- Тест команды doneCmd ---
@@ -121,6 +166,30 @@ func TestDoneCommand(t *testing.T) {
 	})
 }
 
+// --- Проверка ошибок doneCmd ---
+func TestDoneCommand_NonExist(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			doneCmd.Run(doneCmd, []string{"999"})
+		})
+		if !strings.Contains(output, "Ошибка") {
+			t.Errorf("ожидалось сообщение об ошибке отметки несуществующей задачи, получено: %s", output)
+		}
+	})
+}
+
+// --- Тест doneCmd с некорректным ID ---
+func TestDoneCommand_InvalidID(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			doneCmd.Run(doneCmd, []string{"abc"})
+		})
+		if !bytes.Contains([]byte(output), []byte("Некорректный ID")) {
+			t.Errorf("ожидалось сообщение об ошибке некорректного ID")
+		}
+	})
+}
+
 // --- Тест команды deleteCmd ---
 func TestDeleteCommand(t *testing.T) {
 	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
@@ -139,6 +208,30 @@ func TestDeleteCommand(t *testing.T) {
 		tasks, _ := store.ListTasks()
 		if len(tasks) != 0 {
 			t.Errorf("задача должна быть удалена")
+		}
+	})
+}
+
+// --- Проверка ошибок deleteCmd ---
+func TestDeleteCommand_NonExist(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			deleteCmd.Run(deleteCmd, []string{"999"})
+		})
+		if !strings.Contains(output, "Ошибка") {
+			t.Errorf("ожидалось сообщение об ошибке удаления несуществующей задачи, получено: %s", output)
+		}
+	})
+}
+
+// --- Тест deleteCmd на несуществующей задаче ---
+func TestDeleteCommand_NoTasks(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			deleteCmd.Run(deleteCmd, []string{"1"})
+		})
+		if !bytes.Contains([]byte(output), []byte("Ошибка")) {
+			t.Errorf("ожидалось сообщение об ошибке удаления несуществующей задачи")
 		}
 	})
 }
@@ -180,15 +273,58 @@ func TestUpdateCommand(t *testing.T) {
 }
 
 // --- Тест updateCmd без аргументов ---
-func TestUpdateCommand_MissingArgs(t *testing.T) {
+func TestUpdateCommand_NoArgs(t *testing.T) {
 	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
 		output := captureOutput(func() {
-			// вызываем Run с пустым args
 			updateCmd.Run(updateCmd, []string{})
 		})
-
 		if !bytes.Contains([]byte(output), []byte("Ошибка: нужно указать ID и новое название задачи")) {
-			t.Errorf("ожидалось сообщение о нехватке аргументов, получено: %s", output)
+			t.Errorf("ожидалось сообщение об ошибке при отсутствии аргументов")
+		}
+	})
+}
+
+// --- Проверка ошибок updateCmd ---
+func TestUpdateCommand_NoArgs_Error(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			updateCmd.Run(updateCmd, []string{})
+		})
+		if !strings.Contains(output, "Ошибка: нужно указать ID и новое название задачи.") {
+			t.Errorf("ожидалось сообщение об ошибке, получено: %s", output)
+		}
+	})
+}
+
+// --- Тест updateCmd с некорректным ID ---
+func TestUpdateCommand_InvalidID(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		err := store.AddTask(task.Task{
+			ID:        1,
+			Title:     "Old Task",
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			t.Fatalf("не удалось добавить задачу: %v", err)
+		}
+
+		output := captureOutput(func() {
+			updateCmd.Run(updateCmd, []string{"abc", "New Task"})
+		})
+		if !bytes.Contains([]byte(output), []byte("Некорректный ID")) {
+			t.Errorf("ожидалось сообщение об ошибке некорректного ID")
+		}
+	})
+}
+
+// --- Проверка ошибок updateCmd ---
+func TestUpdateCommand_BadID_Error(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			updateCmd.Run(updateCmd, []string{"abc", "title"})
+		})
+		if !strings.Contains(output, "Некорректный ID задачи") {
+			t.Errorf("ожидалось сообщение о некорректном ID, получено: %s", output)
 		}
 	})
 }
@@ -220,6 +356,18 @@ func TestListCommand(t *testing.T) {
 			}
 			listCmd.Run(listCmd, []string{})
 		})
+	})
+}
+
+// --- Тест listCmd на пустом списке задач ---
+func TestListCommand_EmptyList(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		output := captureOutput(func() {
+			listCmd.Run(listCmd, []string{})
+		})
+		if !bytes.Contains([]byte(output), []byte("Список задач пуст")) {
+			t.Errorf("ожидалось сообщение о пустом списке")
+		}
 	})
 }
 
@@ -310,6 +458,50 @@ func TestCompletedCommand(t *testing.T) {
 	})
 }
 
+// --- Тест completeAllCmd на уже выполненных задачах ---
+func TestCompleteAllCommand_AlreadyCompleted(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		// Добавляем задачи, все уже выполненные
+		err := store.AddTask(task.Task{
+			ID:        1,
+			Title:     "Task 1",
+			Completed: true,
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			t.Fatalf("не удалось добавить задачу: %v", err)
+		}
+		err = store.AddTask(task.Task{
+			ID:        2,
+			Title:     "Task 2",
+			Completed: true,
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			t.Fatalf("не удалось добавить задачу: %v", err)
+		}
+
+		// Ловим вывод команды
+		output := captureOutput(func() {
+			completeAllCmd.Run(completeAllCmd, []string{})
+		})
+
+		// Проверяем, что вывод соответствует одному из ожидаемых вариантов
+		if !(strings.Contains(output, "Отмечено как выполненные задач") ||
+			strings.Contains(output, "Все задачи уже выполнены")) {
+			t.Errorf("ожидалось сообщение о выполнении или что все задачи уже выполнены, получено: %s", output)
+		}
+
+		// Проверяем, что все задачи остаются выполненными
+		tasks, _ := store.ListTasks()
+		for _, tsk := range tasks {
+			if !tsk.Completed {
+				t.Errorf("задача %d должна быть отмечена как выполненная", tsk.ID)
+			}
+		}
+	})
+}
+
 // --- Тест команды clearCmd ---
 func TestClearCommand(t *testing.T) {
 	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
@@ -339,6 +531,39 @@ func TestClearCommand(t *testing.T) {
 		tasks, _ := store.ListTasks()
 		if len(tasks) != 1 || tasks[0].ID != 2 {
 			t.Errorf("завершённая задача не была удалена")
+		}
+	})
+}
+
+// --- Проверка ошибок clearCmd ---
+func TestClearCommand_ErrorOnOverwrite(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		// Добавляем завершённую задачу, чтобы список active не был пустым
+		if err := store.AddTask(task.Task{
+			ID:        1,
+			Title:     "Completed Task",
+			Completed: true,
+			CreatedAt: time.Now(),
+		}); err != nil {
+			t.Fatalf("не удалось добавить задачу: %v", err)
+		}
+
+		// Делаем файл только для чтения, чтобы вызвался error при OverwriteTasks
+		if err := os.Chmod(tmpFile, 0444); err != nil {
+			t.Fatalf("не удалось изменить права файла: %v", err)
+		}
+		defer func() { // восстановим права после теста
+			if err := os.Chmod(tmpFile, 0644); err != nil {
+				t.Logf("не удалось восстановить права файла: %v", err)
+			}
+		}()
+
+		output := captureOutput(func() {
+			clearCmd.Run(clearCmd, []string{})
+		})
+
+		if !bytes.Contains([]byte(output), []byte("Ошибка")) {
+			t.Errorf("ожидалось сообщение об ошибке, получено: %s", output)
 		}
 	})
 }
@@ -386,6 +611,19 @@ func TestCompleteAllCommand(t *testing.T) {
 			if !tsk.Completed {
 				t.Errorf("задача %d должна быть отмечена как выполненная", tsk.ID)
 			}
+		}
+	})
+}
+
+// --- Проверка completeAllCmd для всех выполненных ---
+func TestCompleteAllCommand_AllCompleted(t *testing.T) {
+	withTempStore(t, func(store *storage.JSONStore, tmpFile string) {
+		_ = store.AddTask(task.Task{ID: 1, Title: "Task 1", Completed: true})
+		output := captureOutput(func() {
+			completeAllCmd.Run(completeAllCmd, []string{})
+		})
+		if !strings.Contains(output, "Все задачи уже выполнены") {
+			t.Errorf("ожидалось сообщение о выполненных задачах, получено: %s", output)
 		}
 	})
 }

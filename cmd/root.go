@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// tasksFile — путь к JSON-хранилищу задач.
+// По умолчанию используется "tasks.json", в тестах можно подменить.
+var tasksFile = "tasks.json"
+
 // rootCmd — это корневая команда CLI.
 // К ней будут добавляться все подкоманды (например, add, list, done).
 var rootCmd = &cobra.Command{

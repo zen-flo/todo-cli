@@ -18,7 +18,7 @@ var clearCmd = &cobra.Command{
 	Short: "Удалить все завершённые задачи", // краткое описание
 	Run: func(cmd *cobra.Command, args []string) {
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Загружаем список задач
 		tasks, err := store.ListTasks()

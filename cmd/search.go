@@ -21,7 +21,7 @@ var searchCmd = &cobra.Command{
 		keyword := strings.ToLower(args[0]) // приводим к нижнему регистру для нечувствительного поиска
 
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Загружаем все задачи
 		tasks, err := store.ListTasks()

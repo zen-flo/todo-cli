@@ -285,3 +285,30 @@ func TestMarkDone(t *testing.T) {
 		t.Errorf("ожидалось, что задача будет выполнена, но Completed=false")
 	}
 }
+
+// --- Тест ListTasks() на несуществующем файле ---
+func TestJSONStore_ReadNonExist(t *testing.T) {
+	store := NewJSONStore("/non/exist/file.json")
+	tasks, err := store.ListTasks()
+	if err != nil || len(tasks) != 0 {
+		t.Errorf("ожидалось пустой список без ошибки, получили: %v", err)
+	}
+}
+
+// --- Тест UpdateTask() на несуществующем файле ---
+func TestJSONStore_UpdateNonExist(t *testing.T) {
+	store := NewJSONStore("/non/exist/file.json")
+	err := store.UpdateTask(999, "Title", false)
+	if err == nil {
+		t.Errorf("ожидалось, что обновление несуществующей задачи вернет ошибку")
+	}
+}
+
+// --- Тест DeleteTask() на несуществующем файле ---
+func TestJSONStore_DeleteNonExist(t *testing.T) {
+	store := NewJSONStore("/non/exist/file.json")
+	err := store.DeleteTask(999)
+	if err == nil {
+		t.Errorf("ожидалось, что удаление несуществующей задачи вернет ошибку")
+	}
+}

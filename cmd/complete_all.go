@@ -17,7 +17,7 @@ var completeAllCmd = &cobra.Command{
 	Short: "Отметить все задачи как выполненные", // краткое описание
 	Run: func(cmd *cobra.Command, args []string) {
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Загружаем все задачи
 		tasks, err := store.ListTasks()
