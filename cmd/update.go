@@ -15,8 +15,19 @@ import (
 var updateCmd = &cobra.Command{
 	Use:   "update [task ID] [new title]",   // формат вызова
 	Short: "Изменить название задачи по ID", // краткое описание
-	Args:  cobra.ExactArgs(2),               // ожидаем ровно два аргумента: ID и новый заголовок
+	Args: func(cmd *cobra.Command, args []string) error { // ожидаем ровно два аргумента: ID и новый заголовок
+		if len(args) < 2 {
+			fmt.Println("Ошибка: нужно указать ID и новое название задачи.")
+			return fmt.Errorf("недостаточно аргументов")
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
+		// Проверяем количество аргументов прямо в Run
+		if len(args) < 2 {
+			fmt.Println("Ошибка: нужно указать ID и новое название задачи.")
+			return
+		}
 		// Конвертируем аргумент в int (ID задачи)
 		id, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -30,7 +41,7 @@ var updateCmd = &cobra.Command{
 		important, _ := cmd.Flags().GetBool("important")
 
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Обновляем название задачи через публичный метод UpdateTask
 		err = store.UpdateTask(id, newTitle, important)
@@ -47,31 +58,33 @@ var updateCmd = &cobra.Command{
 // init автоматически вызывается при старте приложения.
 // Здесь мы подключаем подкоманду "update" к rootCmd.
 func init() {
-	updateCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		store := storage.NewJSONStore("tasks.json")
-		tasks, err := store.ListTasks()
-		if err != nil {
-			return nil, cobra.ShellCompDirectiveError
-		}
-
-		var suggestions []string
-		for _, t := range tasks {
-			suggestions = append(suggestions, fmt.Sprint(t.ID))
-		}
-		return suggestions, cobra.ShellCompDirectiveNoFileComp
-	}
-
 	rootCmd.AddCommand(updateCmd)
 
 	// Флаг важности
 	updateCmd.Flags().BoolP("important", "i", false, "Сделать задачу важной")
 
-	// Автодополнение для флага --important
+	// Автодополнение для аргументов
 	updateCmd.ValidArgsFunction = func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		// Проверяем, что пользователь вводит флаг --important
-		if len(args) == 0 || args[len(args)-1] == "--important" {
+		if tasksFile == "" {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+
+		store := storage.NewJSONStore(tasksFile)
+		tasks, err := store.ListTasks()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError
+		}
+
+		// Если последний аргумент --important, предлагаем true/false
+		if len(args) > 0 && args[len(args)-1] == "--important" {
 			return []string{"true", "false"}, cobra.ShellCompDirectiveNoFileComp
 		}
-		return nil, cobra.ShellCompDirectiveNoFileComp
+
+		// Показываем ID всех задач
+		var suggestions []string
+		for _, t := range tasks {
+			suggestions = append(suggestions, fmt.Sprint(t.ID))
+		}
+		return suggestions, cobra.ShellCompDirectiveNoFileComp
 	}
 }

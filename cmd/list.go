@@ -62,8 +62,15 @@ var listCmd = &cobra.Command{
 	Use:   "list",                // формат вызова
 	Short: "Показать все задачи", // краткое описание
 	Run: func(cmd *cobra.Command, args []string) {
+		// Получаем флаг сортировки и проверяем
+		sortBy, _ := cmd.Flags().GetString("sort") //сортировка: name, date
+		if sortBy != "" && sortBy != "title" && sortBy != "created" {
+			fmt.Printf("Ошибка: неизвестный способ сортировки: %s\n", sortBy)
+			return
+		}
+
 		// Создаём хранилище задач
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Получаем список всех задач
 		tasks, err := store.ListTasks()
@@ -78,7 +85,6 @@ var listCmd = &cobra.Command{
 		}
 
 		// Получаем флаги
-		sortBy, _ := cmd.Flags().GetString("sort")           //сортировка: name, date
 		filter, _ := cmd.Flags().GetString("filter")         // фильтр: all, pending, completed
 		importantOnly, _ := cmd.Flags().GetBool("important") // фильтр: важные. Да/нет.
 

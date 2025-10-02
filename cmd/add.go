@@ -17,9 +17,13 @@ var addCmd = &cobra.Command{
 	Short: "Добавить новую задачу", // краткое описание
 	Args:  cobra.ExactArgs(1),      // ожидаем ровно один аргумент — название задачи
 	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) == 0 {
+			fmt.Println("Ошибка: нужно указать заголовок задачи.")
+			return
+		}
 		// Создаём новое хранилище задач.
 		// Указываем путь к файлу.
-		store := storage.NewJSONStore("tasks.json")
+		store := storage.NewJSONStore(tasksFile)
 
 		// Считываем флаг, что задача важная
 		important, _ := cmd.Flags().GetBool("important")
